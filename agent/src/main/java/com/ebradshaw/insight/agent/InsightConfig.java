@@ -24,7 +24,7 @@ public class InsightConfig  {
 
             String[] keyValuePair = arg.split(":");
             if (keyValuePair.length != 2) {
-                throw new IllegalArgumentException("agent args must be of format [key1:[value1],[key2]:[value2]...");
+                throw new IllegalArgumentException("agent args must be of format [key1]:[value1],[key2]:[value2]...");
             }
 
             switch (keyValuePair[0]){
