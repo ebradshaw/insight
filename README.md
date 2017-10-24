@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/ebradshaw/insight.svg?branch=master)](https://travis-ci.org/ebradshaw/insight)
 # Insight
 Insight is a Java agent for automatically aggregating request metrics from a web application.  For each request, we track request time, the number of Strings allocated as well as the total memory allocated.  It hooks into the web application runtime by injecting a special tracking filter into Servlet 3.0 compliant web servers.
 
