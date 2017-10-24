@@ -1,0 +1,51 @@
+apply plugin: 'groovy'  //For testing
+
+configurations {
+    jarjar
+}
+
+dependencies {
+    compile ('com.google.code.java-allocation-instrumenter:java-allocation-instrumenter:3.0.1') { transitive = false }
+    compile 'com.google.guava:guava:23.0'
+
+    compile 'javax.servlet:javax.servlet-api:3.1.0'
+
+    compile 'org.ow2.asm:asm:5.2'
+    compile 'org.ow2.asm:asm-analysis:5.2'
+    compile 'org.ow2.asm:asm-commons:5.2'
+    compile 'org.ow2.asm:asm-util:5.2'
+
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.2'
+    compile 'log4j:log4j:1.2.17'
+
+    testCompile 'org.codehaus.groovy:groovy-all:2.4.12'
+    testCompile "org.spockframework:spock-core:1.1-groovy-2.4"
+    testCompile "com.ea.agentloader:ea-agent-loader:1.0.3"
+
+    jarjar 'org.pantsbuild:jarjar:1.6.4'
+}
+
+
+jar {
+    archiveName "insight-agent.jar"
+    from('../ui/build') {
+        into 'insight-static'
+    }
+    doLast {
+        project.ant {
+            taskdef name: 'jarjar', classname: 'org.pantsbuild.jarjar.JarJarTask', classpath: configurations.jarjar.asPath
+            jarjar(jarfile: jar.archivePath, manifest: "build/resources/main/META-INF/MANIFEST.MF", update: true) {
+                zipfileset(src: jar.archivePath)
+                configurations.compile.files.collect { zipfileset(src: it) }
+                rule pattern: 'javassist.**', result: 'com.ebradshaw.insight.agent.ext.javassist.@1'
+                rule pattern: 'com.google.**', result: 'com.ebradshaw.insight.agent.ext.com.google.@1'
+                rule pattern: 'org.codehaus.**', result: 'com.ebradshaw.insight.agent.ext.org.codehaus.@1'
+                rule pattern: 'org.objectweb.**', result: 'com.ebradshaw.insight.agent.ext.org.objectweb.@1'
+                rule pattern: 'com.fasterxml.**', result: 'com.ebradshaw.insight.agent.ext.com.fasterxml.@1'
+                rule pattern: 'org.apache.log4j.**', result: 'com.ebradshaw.insight.agent.ext.org.apache.log4j.@1'
+            }
+        }
+    }
+}
+
+processResources.dependsOn(':ui:buildNpm')

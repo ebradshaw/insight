@@ -1,0 +1,5 @@
+rootProject.name = 'insight'
+include 'webapp'
+include 'agent'
+include 'ui'
+

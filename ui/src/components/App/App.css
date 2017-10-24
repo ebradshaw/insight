@@ -1,0 +1,9 @@
+.row-spacer {
+    height: 15px;
+}
+
+.app .container {
+    height: calc(100% - 141px);
+    display: flex;
+    flex-direction: column;
+}

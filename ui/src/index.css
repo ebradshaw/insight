@@ -1,0 +1,9 @@
+html, body, #root, .app {
+    height: 100%;
+}
+
+.navbar-text {
+    margin-left: 0px !important;
+}
+
+

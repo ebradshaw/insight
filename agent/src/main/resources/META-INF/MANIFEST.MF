@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Premain-Class: com.ebradshaw.insight.agent.InsightAgent
+Boot-Class-Path: ./insight-agent.jar
+Can-Redefine-Classes: true
+Can-Retransform-Classes: true
