@@ -14,11 +14,7 @@ import java.security.ProtectionDomain;
 
 public class SpringBootFilterInstrumenter implements ClassFileTransformer {
 
-    private String[] classes = new String[]{
-            "org/springframework/boot/context/embedded/AnnotationConfigEmbeddedWebApplicationContext",
-            "org/springframework/context/annotation/AnnotationConfigApplicationContext",
-            "org/springframework/web/context/support/AnnotationConfigWebApplicationContext"
-    };
+    private String[] classes;
 
     public SpringBootFilterInstrumenter() {
         this(new String[]{
