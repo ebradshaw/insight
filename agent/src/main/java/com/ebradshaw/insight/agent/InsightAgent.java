@@ -1,27 +1,17 @@
 package com.ebradshaw.insight.agent;
 
 import com.ebradshaw.insight.agent.instrumentation.FilteredAllocationInstrumeter;
-import com.ebradshaw.insight.agent.instrumentation.sampler.MemoryAllocationSampler;
-import com.ebradshaw.insight.agent.instrumentation.sampler.StringAllocationSampler;
 import com.ebradshaw.insight.agent.instrumentation.springboot.SpringBootFilterInstrumenter;
-import com.ebradshaw.insight.agent.request.RequestEventHandler;
-import com.ebradshaw.insight.agent.request.RequestMetricsService;
-import com.ebradshaw.insight.agent.request.RequestMetricsServiceImpl;
-import com.ebradshaw.insight.agent.server.InsightMetricsHandler;
-import com.ebradshaw.insight.agent.server.InsightStaticHandler;
-import com.ebradshaw.insight.agent.servlet.InsightFilter;
-import com.google.common.eventbus.EventBus;
 import com.google.monitoring.runtime.instrumentation.AllocationRecorder;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
-import org.apache.log4j.PropertyConfigurator;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
-import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 
 
@@ -29,49 +19,8 @@ public class InsightAgent {
 
     public static void premain(String agentArgs, Instrumentation inst) throws Exception {
         initializeInstrumentation(inst);
-        new InsightAgent().bootstrap(agentArgs);
-    }
-
-    private void bootstrap(String agentArgs) throws IOException {
-        InsightConfig config = InsightConfig.fromAgentArgs(agentArgs);
-        EventBus eventBus = new EventBus();
-
-        InsightFilter.setEventBus(eventBus);
-
-        //Register samples to handle string/memory allocations and dispatch them to the event bus
-        AllocationRecorder.addSampler(new StringAllocationSampler(eventBus));
-        AllocationRecorder.addSampler(new MemoryAllocationSampler(eventBus));
-
-        //Initialize metrics service and create event handler to allocate metrics for requests
-        RequestMetricsService requestMetricsService = new RequestMetricsServiceImpl();
-        RequestEventHandler requestEventHandler = new RequestEventHandler(requestMetricsService);
-        eventBus.register(requestEventHandler);
-
-        //Initialize http server to serve static web application and provide metrics endpoint
-        initializeServer(config.getPort(), requestMetricsService);
-
-        //Initialize log4j
-        initializeLogging();
-    }
-
-    private void initializeLogging() {
-        try (InputStream inputStream = ClassLoader.getSystemResourceAsStream("insight-logging/log4j.properties")) {
-            PropertyConfigurator.configure(inputStream);
-        } catch (IOException ex) {
-            System.err.println("Failed to initialize Log4j");
-        }
-    }
-
-    private void initializeServer(int port, RequestMetricsService requestMetricsService) throws IOException {
-        HttpHandler metricsHandler = new InsightMetricsHandler(requestMetricsService);
-        HttpHandler staticContentHandler = new InsightStaticHandler();
-        final HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.createContext("/api/metrics", metricsHandler);
-        server.createContext("/", staticContentHandler);
-        server.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            server.stop(0);
-        }));
+        injectRuntimeClassloader();
+        initializeRuntime(agentArgs);
     }
 
     private static void initializeInstrumentation(Instrumentation inst) throws Exception {
@@ -88,12 +37,14 @@ public class InsightAgent {
             // NOP
         }
 
+        Class[] c = inst.getAllLoadedClasses();
+
         //Small hack here - Since we're using our own FilteredAllocationInstrumenter(), we can't use
         //AllocationInstrumenter.premain(...) which would usually set this.  So, we set it ourselves.
-        Method method = AllocationRecorder.class.getDeclaredMethod("setInstrumentation", Instrumentation.class);
-        method.setAccessible(true);
-        method.invoke(null, inst);
-        method.setAccessible(false);
+        Field field = AllocationRecorder.class.getDeclaredField("instrumentation");
+        field.setAccessible(true);
+        field.set(null, inst);
+        field.setAccessible(false);
 
         // Get the set of already loaded classes that can be rewritten.
         Class<?>[] classes = inst.getAllLoadedClasses();
@@ -109,10 +60,35 @@ public class InsightAgent {
         try {
             inst.retransformClasses(classList.toArray(workaround));
         } catch (UnmodifiableClassException e) {
-            System.err.println("Instrumeters were unable to retransform early loaded classes.");
+            System.err.println("Instrumenters were unable to retransform early loaded classes.");
         }
+    }
 
+    /**
+     * We need to inject our custom runtim classloader into the application's classloader chain to properly handle classes
+     * that depend on the servlet api, so we use reflection to insert it as the parent of the Extension Class Loader.
+     * This seems to work well, but may be a tad risky!
+     */
+    private static void injectRuntimeClassloader() throws IOException, NoSuchFieldException, IllegalAccessException {
+        ClassLoader extClassLoader = ClassLoader.getSystemClassLoader().getParent();
+        ClassLoader runtimeClassLoader = new ServletTunnelingClassLoader(extractRuntime().toURI().toURL(), null);
+        Field f = ClassLoader.class.getDeclaredField("parent");
+        f.setAccessible(true);
+        f.set(extClassLoader, runtimeClassLoader);
+        f.setAccessible(false);
+    }
 
+    private static void initializeRuntime(String agentArgs) throws Exception {
+        Class<?> runtimeClass = ClassLoader.getSystemClassLoader().loadClass("com.ebradshaw.insight.agent.InsightRuntime");
+        runtimeClass.getDeclaredMethod("bootstrap", String.class).invoke(null, agentArgs);
+    }
+
+    private static File extractRuntime() throws IOException {
+        File output = File.createTempFile("insight-runtime", "jar");
+        try (InputStream inputStream = ClassLoader.getSystemClassLoader().getResource("libs/insight-runtime.jar").openStream()) {
+            Files.copy(inputStream, output.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+        return output;
     }
 
 }

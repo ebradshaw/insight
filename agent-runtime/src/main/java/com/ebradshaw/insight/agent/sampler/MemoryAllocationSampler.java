@@ -1,21 +1,19 @@
-package com.ebradshaw.insight.agent.instrumentation.sampler;
+package com.ebradshaw.insight.agent.sampler;
 
 import com.ebradshaw.insight.agent.events.Events;
 import com.google.common.eventbus.EventBus;
 import com.google.monitoring.runtime.instrumentation.Sampler;
 
-public class StringAllocationSampler implements Sampler{
+public class MemoryAllocationSampler implements Sampler{
 
     private final EventBus eventBus;
 
-    public StringAllocationSampler(EventBus eventBus) {
+    public MemoryAllocationSampler(EventBus eventBus) {
         this.eventBus = eventBus;
     }
 
     @Override
     public void sampleAllocation(int count, String desc, Object newObj, long size) {
-        if(count == -1 && "java/lang/String".equals(desc)){
-            eventBus.post(Events.stringCreated((String) newObj));
-        }
+        eventBus.post(Events.memoryAllocated(size));
     }
 }

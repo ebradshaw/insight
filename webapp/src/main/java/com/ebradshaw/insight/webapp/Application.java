@@ -18,7 +18,8 @@ public class Application {
         return "Hello world!";
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+        System.out.println(Application.class.getClassLoader());
         SpringApplication.run(Application.class);
     }
 

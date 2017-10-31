@@ -1,8 +1,8 @@
-package com.ebradshaw.insight.agent.com.ebradshaw.insight.agent.instrumentation.sampler
+package com.ebradshaw.insight.agent.sampler
 
 import com.ebradshaw.insight.agent.TestEventRecorder
 import com.ebradshaw.insight.agent.events.MemoryAllocatedEvent
-import com.ebradshaw.insight.agent.instrumentation.sampler.MemoryAllocationSampler
+import com.ebradshaw.insight.agent.sampler.MemoryAllocationSampler
 import com.google.common.eventbus.EventBus
 import spock.lang.Specification
 

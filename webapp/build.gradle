@@ -3,5 +3,6 @@ plugins {
 }
 
 dependencies {
+    compileOnly project(":agent")
     compile 'org.springframework.boot:spring-boot-starter-web'
 }
