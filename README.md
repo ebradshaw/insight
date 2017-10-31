@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/ebradshaw/insight.svg?branch=master)](https://travis-ci.org/ebradshaw/insight)
 # Insight
-Insight is a Java agent for automatically aggregating request metrics from a Spring Boot application.  For each request, we track the request time, the number of Strings allocated as well as the total memory allocated.  It hooks into the web application runtime by injecting a special tracking filter into the Spring ApplicationContext.
+Insight is a Java agent for automatically aggregating request metrics from a Servlet 3.0 based web container.  For each request, we track the request time, the number of Strings allocated as well as the total memory allocated.  It hooks into the web application runtime by injecting a special tracking filter into each ServletContext.
 
 The individual requests as well as aggregate data can be viewed at `localhost:8081/index.html`.  
 
@@ -29,7 +29,7 @@ gradlew demo
 Navigate your browser to `localhost:8081/index.html` where the Insight UI will be running.  To generate sample http requests, browse to `localhost:8080/test`
 
 ## Limitations
-* Only tested with Spring Boot.
+* Only tested with Spring Boot, Jetty and Tomcat.
 * Only tracks allocations made by the requesting thread, not child threads.
 * Request history is not persistant and only the 1000 most recent requests are tracked in memory.  Future implementations may include a persistance implementation.
 
