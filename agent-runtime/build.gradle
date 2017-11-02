@@ -40,5 +40,5 @@ jar {
     }
 }
 
-//processResources.dependsOn(':ui:buildNpm')
+processResources.dependsOn(':ui:buildNpm')
 
